@@ -195,6 +195,32 @@ class BaostockFetcher(BaseFetcher):
                 if isinstance(e, DataFetchError):
                     raise
                 raise DataFetchError(f"Baostock 获取数据失败: {e}") from e
+            
+    def _fetch_code_name(self, stock_code: str) -> str:
+        """
+        获取股票名称
+        
+        :param self: 说明
+        :param stock_code: 股票代码，如 '600519'
+        :type stock_code: str
+        :return: 股票名称，如 '贵州茅台'
+        :rtype: str
+        """
+        bs_code = self._convert_stock_code(stock_code)
+        with self._baostock_session() as bs:
+            try:
+                rs = bs.query_stock_basic(code=bs_code)
+                if rs.error_code != '0':
+                    raise DataFetchError(f"Baostock 查询股票名称失败: {rs.error_msg}")
+                if rs.next():
+                    return rs.get_row_data()[1]  # 股票名称在第二列
+                else:
+                    raise DataFetchError(f"Baostock 未查询到 {stock_code} 的名称")
+            except Exception as e:
+                if isinstance(e, DataFetchError):
+                    raise
+                raise DataFetchError(f"Baostock 获取股票名称失败: {e}") from e
+        return None
     
     def _normalize_data(self, df: pd.DataFrame, stock_code: str) -> pd.DataFrame:
         """
