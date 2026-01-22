@@ -44,6 +44,7 @@ from feishu_doc import FeishuDocManager
 from config import get_config, Config
 from storage import get_db, DatabaseManager
 from data_provider import DataFetcherManager
+from data_provider.baostock_fetcher import BaostockFetcher
 from data_provider.akshare_fetcher import AkshareFetcher, RealtimeQuote, ChipDistribution
 from analyzer import GeminiAnalyzer, AnalysisResult, STOCK_NAME_MAP
 from notification import NotificationService, NotificationChannel, send_daily_report
@@ -151,6 +152,7 @@ class StockAnalysisPipeline:
         self.db = get_db()
         self.fetcher_manager = DataFetcherManager()
         self.akshare_fetcher = AkshareFetcher()  # 用于获取增强数据（量比、筹码等）
+        self.baostock_fetcher = BaostockFetcher()  # 用于获取备用数据源
         self.trend_analyzer = StockTrendAnalyzer()  # 趋势分析器
         self.analyzer = GeminiAnalyzer()
         self.notifier = NotificationService()
@@ -249,6 +251,12 @@ class StockAnalysisPipeline:
                               f"量比={realtime_quote.volume_ratio}, 换手率={realtime_quote.turnover_rate}%")
             except Exception as e:
                 logger.warning(f"[{code}] 获取实时行情失败: {e}")
+
+            if not stock_name:
+                try:
+                    stock_name = self.baostock_fetcher._fetch_code_name(code)
+                except Exception as e:
+                    logger.warning(f"[{code}] 获取股票名称失败: {e}")
             
             # 如果还是没有名称，使用代码作为名称
             if not stock_name:
