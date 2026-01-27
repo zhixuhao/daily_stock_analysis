@@ -935,10 +935,9 @@ class GeminiAnalyzer:
 - 成交量较昨日变化：{volume_change}倍
 - 价格较昨日变化：{context.get('price_change_ratio', 'N/A')}%
 """
-        
-        # 添加新闻搜索结果（重点区域）
-        prompt += """
----
+
+        # === 分隔线 ===
+        prompt += "\n---\n"
 
         # 添加常用技术指标摘要（程序计算结果）
         # 只展示最后值与信号，避免 Prompt 过长
@@ -972,8 +971,8 @@ class GeminiAnalyzer:
 > 计算样本：最近 {meta.get('rows', 'N/A')} 条K线；最新日期：{meta.get('last_date', 'N/A')}
 """
 
-## 📰 舆情情报
-"""
+        # 添加新闻搜索结果（重点区域）
+        prompt += "\n## 📰 舆情情报\n"
         if news_context:
             prompt += f"""
 以下是 **{stock_name}({code})** 近7日的新闻搜索结果，请重点提取：
