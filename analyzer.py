@@ -940,6 +940,38 @@ class GeminiAnalyzer:
         prompt += """
 ---
 
+        # 添加常用技术指标摘要（程序计算结果）
+        # 只展示最后值与信号，避免 Prompt 过长
+        if 'technical_indicators' in context and isinstance(context['technical_indicators'], dict):
+            ti = context['technical_indicators']
+            meta = ti.get('meta', {}) if isinstance(ti.get('meta'), dict) else {}
+            err = ti.get('error')
+
+            if err:
+                prompt += f"""
+### 常用技术指标（程序计算）
+> 技术指标计算失败：{err}
+"""
+            else:
+                rsi = ti.get('rsi', {}) if isinstance(ti.get('rsi'), dict) else {}
+                macd = ti.get('macd', {}) if isinstance(ti.get('macd'), dict) else {}
+                boll = ti.get('boll', {}) if isinstance(ti.get('boll'), dict) else {}
+                kdj = ti.get('kdj', {}) if isinstance(ti.get('kdj'), dict) else {}
+                atr = ti.get('atr', {}) if isinstance(ti.get('atr'), dict) else {}
+
+                prompt += f"""
+### 常用技术指标（程序计算，供你辅助判断）
+| 指标 | 最新值 | 信号解读 |
+|------|--------|----------|
+| RSI(14) | {rsi.get('rsi14', 'N/A')} | {rsi.get('signal', '')} |
+| MACD | DIF={macd.get('dif', 'N/A')}, DEA={macd.get('dea', 'N/A')}, HIST={macd.get('hist', 'N/A')} | {macd.get('signal', '')} |
+| BOLL(20,2) | MID={boll.get('mid', 'N/A')}, U={boll.get('upper', 'N/A')}, L={boll.get('lower', 'N/A')} | {boll.get('position', '')} |
+| KDJ(9,3,3) | K={kdj.get('k', 'N/A')}, D={kdj.get('d', 'N/A')}, J={kdj.get('j', 'N/A')} | {kdj.get('signal', '')} |
+| ATR(14) | {atr.get('atr14', 'N/A')} | 波动率≈{atr.get('atr_pct', 'N/A')}% |
+
+> 计算样本：最近 {meta.get('rows', 'N/A')} 条K线；最新日期：{meta.get('last_date', 'N/A')}
+"""
+
 ## 📰 舆情情报
 """
         if news_context:

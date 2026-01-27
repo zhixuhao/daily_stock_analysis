@@ -385,9 +385,10 @@ class DatabaseManager:
         return saved_count
     
     def get_analysis_context(
-        self, 
+        self,
         code: str,
-        target_date: Optional[date] = None
+        target_date: Optional[date] = None,
+        history_days: int = 60,
     ) -> Optional[Dict[str, Any]]:
         """
         获取分析所需的上下文数据
@@ -397,15 +398,17 @@ class DatabaseManager:
         Args:
             code: 股票代码
             target_date: 目标日期（默认今天）
+            history_days: 附带的历史K线条数（用于趋势/指标计算，默认60）
             
         Returns:
             包含今日数据、昨日对比等信息的字典
         """
         if target_date is None:
             target_date = date.today()
-        
-        # 获取最近2天数据
-        recent_data = self.get_latest_data(code, days=2)
+
+        # 获取最近 N 条数据（至少包含2条用于昨日对比）
+        history_days = max(int(history_days or 0), 2)
+        recent_data = self.get_latest_data(code, days=history_days)
         
         if not recent_data:
             logger.warning(f"未找到 {code} 的数据")
@@ -419,6 +422,13 @@ class DatabaseManager:
             'date': today_data.date.isoformat(),
             'today': today_data.to_dict(),
         }
+
+        # 附带原始历史数据（按日期升序），用于趋势分析/技术指标计算
+        # 注意：不要在 LLM prompt 中直接塞入全量 raw_data，建议只提取指标摘要。
+        try:
+            context['raw_data'] = [d.to_dict() for d in reversed(recent_data)]
+        except Exception as e:
+            logger.warning(f"构建 {code} raw_data 失败: {e}")
         
         if yesterday_data:
             context['yesterday'] = yesterday_data.to_dict()

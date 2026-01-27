@@ -52,6 +52,7 @@ from search_service import SearchService, SearchResponse
 from enums import ReportType
 from stock_analyzer import StockTrendAnalyzer, TrendAnalysisResult
 from market_analyzer import MarketAnalyzer
+from technical_indicators import compute_indicators
 
 # 配置日志格式
 LOG_FORMAT = '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s'
@@ -409,6 +410,20 @@ class StockAnalysisPipeline:
                 'signal_reasons': trend_result.signal_reasons,
                 'risk_factors': trend_result.risk_factors,
             }
+
+        # 添加常用技术指标（程序计算，避免把全量K线塞进 Prompt）
+        # 依赖 storage.get_analysis_context() 提供 raw_data
+        try:
+            raw_data = enhanced.get('raw_data')
+            if isinstance(raw_data, list) and raw_data:
+                import pandas as pd
+
+                df = pd.DataFrame(raw_data)
+                indicators = compute_indicators(df)
+                # 仅在成功计算时写入（即使有 error 字段也写入，便于排查）
+                enhanced['technical_indicators'] = indicators
+        except Exception as e:
+            logger.warning(f"[{enhanced.get('code', '')}] 计算技术指标失败: {e}")
         
         return enhanced
     
